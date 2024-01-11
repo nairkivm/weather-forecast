@@ -14,7 +14,7 @@ sys.path.insert(
     )
 )
 
-from utils.sql_utils import SqlUtils
+# from utils.sql_utils import SqlUtils
 
 # # This the code for retrieving data from database
 # def getDatabaseDataFrame(
