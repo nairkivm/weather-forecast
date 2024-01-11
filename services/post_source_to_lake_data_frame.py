@@ -14,13 +14,13 @@ sys.path.insert(
     )
 )
 
-def postSourceToWarehouseDataFrame(
+def postSourceToLakeDataFrame(
         dataFrame : pd.DataFrame,
         category : str
     ):
-    # # Store into data warehouse
+    # # Store into data lake
     # dataFrame.to_csv(
-    #     '../data_warehouse/'+
+    #     '../data_lake/'+
     #     str(category).replace(' ','_')+
     #     '/'+
     #     datetime.now(tz=pytz.timezone("Asia/Jakarta")).strftime('%Y-%m-%d')+
@@ -29,9 +29,9 @@ def postSourceToWarehouseDataFrame(
     #     '-kab-kupang.csv',
     #     index=False
     # )
-    # Store into data warehouse
+    # Store into data lake
     dataFrame.to_csv(
-        './data_warehouse/'+
+        './data_lake/'+
         str(category).replace(' ','_')+
         '/'+
         datetime.now(tz=pytz.timezone("Asia/Jakarta")).strftime('%Y-%m-%d')+

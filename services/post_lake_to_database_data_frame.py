@@ -25,7 +25,7 @@ pandasToPostgresMap = {
     'datetime64[ns]' : 'TIMESTAMP WITHOUT TIME ZONE'
 }
 
-def postWarehouseToDatabaseDataFrame(
+def postLakeToDatabaseDataFrame(
         dataFrame : pd.DataFrame,
         table_name : str,
         primaryKey : str

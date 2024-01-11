@@ -23,9 +23,9 @@ sys.path.insert(
 from configs.g_sheets import GSheets
 from utils.datetime_utils import DatetimeUtils
 from services.get_source_data_frame import getSourceDataFrame
-from services.post_source_to_warehouse_data_frame import postSourceToWarehouseDataFrame
-from services.get_warehouse_data_frame import getWarehouseDataFrame
-from services.post_warehouse_to_database_data_frame import postWarehouseToDatabaseDataFrame
+from services.post_source_to_lake_data_frame import postSourceToLakeDataFrame
+from services.get_lake_data_frame import getLakeDataFrame
+from services.post_lake_to_database_data_frame import postLakeToDatabaseDataFrame
 
 def importWeatherInfoDataFrame():
     print('path', os.getcwd())
@@ -36,7 +36,7 @@ def importWeatherInfoDataFrame():
         gSheetGId=GSheets.weatherInfoSheet.gid,
         skiprows=3
     )
-    postSourceToWarehouseDataFrame(
+    postSourceToLakeDataFrame(
         weatherInfoDataFrame,
         'weather info'
     )
@@ -48,14 +48,14 @@ def importTemperatureData():
         gSheetGId=GSheets.temperatureSheet.gid,
         skiprows=3
     )
-    postSourceToWarehouseDataFrame(
+    postSourceToLakeDataFrame(
         temperatureDataFrame,
         'temperature'
     )
 
-def loadWeatherInfoData():
-    # Load from data warehouse
-    weatherInfoDataFrame = getWarehouseDataFrame('weather info')
+def transformWeatherInfoData():
+    # Get from data lake
+    weatherInfoDataFrame = getLakeDataFrame('weather info')
     # Rename columns so they're the same as columns in database
     weatherInfoDataFrame.columns = [
         'timestamp',
@@ -66,15 +66,15 @@ def loadWeatherInfoData():
         weatherInfoDataFrame['timestamp'].apply(DatetimeUtils.formatDatetime)
     )
     # Update/insert dataFrame into database
-    postWarehouseToDatabaseDataFrame(
+    postLakeToDatabaseDataFrame(
         dataFrame=weatherInfoDataFrame,
         table_name='weather_info',
         primaryKey='timestamp'
     )
 
-def loadTemperatureData():
-    # Load from data warehouse
-    temperatureDataFrame = getWarehouseDataFrame('temperature')
+def transformTemperatureData():
+    # Get from data lake
+    temperatureDataFrame = getLakeDataFrame('temperature')
     # Rename columns so they're the same as columns in database
     temperatureDataFrame.columns = [
         'timestamp',
@@ -86,7 +86,7 @@ def loadTemperatureData():
         temperatureDataFrame['timestamp'].apply(DatetimeUtils.formatDatetime)
     )
     # Update/insert dataFrame into database
-    postWarehouseToDatabaseDataFrame(
+    postLakeToDatabaseDataFrame(
         dataFrame=temperatureDataFrame,
         table_name='temperature',
         primaryKey='timestamp'
@@ -120,11 +120,11 @@ with DAG(
     )
     task_3 = PythonOperator(
         task_id='load-weather-info-dataframe',
-        python_callable=loadWeatherInfoData
+        python_callable=transformWeatherInfoData
     )
     task_4 = PythonOperator(
         task_id='load-temperature-dataframe',
-        python_callable=loadTemperatureData
+        python_callable=transformTemperatureData
     )
     # Run tasks
     task_1 >> task_2 >> task_3 >> task_4

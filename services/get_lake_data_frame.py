@@ -14,23 +14,23 @@ sys.path.insert(
     )
 )
 
-def getWarehouseDataFrame(
+def getLakeDataFrame(
         category : str
     ):
-    # # Load from data warehouse
+    # # Load from data lake
     # dataFileDirectory = os.path.abspath(
     #     os.path.join(
     #         os.path.join(
     #             os.getcwd(), '..'
-    #         ), 'data_warehouse/'+
+    #         ), 'data_lake/'+
     #         str(category).replace(' ','_')
     #     )
     # )
-    # Load from data warehouse
+    # Load from data lake
     dataFileDirectory = os.path.abspath(
         os.path.join(
             os.getcwd(), 
-            'data_warehouse/'+str(category).replace(' ','_')
+            'data_lake/'+str(category).replace(' ','_')
         )
     )
     print("dataFileDirectory", dataFileDirectory, os.path.isdir(dataFileDirectory))
@@ -39,7 +39,7 @@ def getWarehouseDataFrame(
     
     dataFrame = pd.read_csv(
         os.path.join(os.path.dirname(__file__),
-            '../data_warehouse/'+
+            '../data_lake/'+
             str(category).replace(' ','_')+
             '/'+
             lastAddedFile
