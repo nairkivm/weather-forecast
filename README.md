@@ -14,16 +14,16 @@ Trivia:
 2. The project chooses Kab. Kupang, NTT because that is a city where Indonesian National Observatory (at Mount Timau) is located, so this dashboard could be used to track the weather for astronomy observation purpose.
 
 ## Architecture
-![weather-forecast-architecture](resources\weather-forecast-architecture.drawio.png "weather-forecast Architecture")
+![weather-forecast-architecture](https://github.com/nairkivm/weather-forecast/blob/main/resources/weather-forecast-architecture.drawio.png "weather-forecast Architecture")
 
 ## Database ERD
-![weather-forecast-erd](resources\weather-forecast-erd.png "weather-forecast Database ERD")
+![weather-forecast-erd](https://github.com/nairkivm/weather-forecast/blob/main/resources/weather-forecast-erd.png "weather-forecast Database ERD")
 
 ## DAG
-![weather-forecast-dag](resources\weather-forecast-dag.png "weather-forecast DAG")
+![weather-forecast-dag](https://github.com/nairkivm/weather-forecast/blob/main/resources/weather-forecast-dag.png "weather-forecast DAG")
 
 ## Dashboard
-[![weather-forecast-dashboard](resources\weather-forecast-dashboard.png "weather-forecast Dashboard")](https://nairkivm-weather-forecast-weather-forecast-dashboard.streamlit.app/)
+[![weather-forecast-dashboard](https://github.com/nairkivm/weather-forecast/blob/main/resources/weather-forecast-dashboard.png "weather-forecast Dashboard")](https://nairkivm-weather-forecast-weather-forecast-dashboard.streamlit.app/)
 
 
 ## Resources:
