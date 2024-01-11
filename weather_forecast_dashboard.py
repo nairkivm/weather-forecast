@@ -23,32 +23,31 @@ with st.container():
         st.write('Tanggal')
         col1_1, col2_1, col3_1, col4_1, col5_1 = st.columns(5)
         with col1_1:
-            start_date = st.date_input('Dari', value="today")
+            startDate = st.date_input('Dari', value=datetime(2024,1,1))
         with col2_1:
-            end_date = st.date_input('Sampai', value="today") 
+            endDate = st.date_input('Sampai', value=datetime(2024,1,4)) 
 
-        st.write('Satuan Temperatur')
+        st.write('Skala Temperatur')
         col1_2, col2_2, col3_2 = st.columns(3)
         with col1_2:
-            unit = st.selectbox('Satuan', ('Celsius', 'Fahrenheit'))
+            temperatureScale = st.selectbox('Skala', ('Celsius', 'Fahrenheit'))
+
+        st.write('Skala Timeframe Temperatur')
+        col1_2, col2_2, col3_2 = st.columns(3)
+        with col1_2:
+            timeframeScale = st.selectbox('Skala',('Harian', 'Per Jam', 'Gabungan'))
 
 
 weatherInfoDataFrame = getDatabaseDataFrame(
-    'weather_info',
-    ['id', 'timestamp', 'weather_code'],
-    "timestamp >= date(now()) - 7"
+    'weather_info'
 )
 
 weatherCodeInfoDataFrame = getDatabaseDataFrame(
-    'weather_code_info',
-    ['id', 'code', 'info_id'],
-    ""
+    'weather_code_info'
 )
 
 temperatureDataFrame = getDatabaseDataFrame(
-    'temperature',
-    ['id', 'timestamp', 'temperature_c', 'temperature_f'],
-    ""
+    'temperature'
 )
 
 # Format for dataFrame
@@ -57,27 +56,35 @@ temperatureDataFrame['timestamp'] = pd.to_datetime(temperatureDataFrame['timesta
 
 # Filtered dataFrame
 ## Filter for timestamp
+print(type(startDate), startDate)
 try:
     weatherInfoFilteredDataFrame = (
-        (weatherInfoDataFrame['timestamp'].dt.date() >= start_date.date()) &
-        (weatherInfoDataFrame['timestamp'].dt.date() <= end_date.date()) 
+        weatherInfoDataFrame[
+            (weatherInfoDataFrame['timestamp'].dt.date >= startDate) &
+            (weatherInfoDataFrame['timestamp'].dt.date <= endDate)
+        ]
+         
     )
     temperatureFilteredDataFrame = (
-        (temperatureDataFrame['timestamp'].dt.date() >= start_date.date()) &
-        (temperatureDataFrame['timestamp'].dt.date() <= end_date.date()) 
+        temperatureDataFrame[
+            (temperatureDataFrame['timestamp'].dt.date >= startDate) &
+            (temperatureDataFrame['timestamp'].dt.date <= endDate) 
+        ]
     )
 except:
     weatherInfoFilteredDataFrame = weatherInfoDataFrame
     temperatureFilteredDataFrame = temperatureDataFrame
+
 ## Filter for temperature_unit
-if unit == 'Fahrenheit':
+if temperatureScale == 'Fahrenheit':
     temperatureFilteredDataFrame['t'] = temperatureFilteredDataFrame['temperature_f']
 else:
     temperatureFilteredDataFrame['t'] = temperatureFilteredDataFrame['temperature_c']
 
-# Temperatur Rerata
+# Average Temperature
 avgTemperatureMetricsData = temperatureFilteredDataFrame['t'].mean()
-# List Cuaca
+# Weather Forecast List
+## Merge weather_info & the code
 weatherInfoFilteredDataFrame = pd.merge(
     weatherInfoFilteredDataFrame,
     weatherCodeInfoDataFrame,
@@ -85,17 +92,222 @@ weatherInfoFilteredDataFrame = pd.merge(
     left_on='weather_code',
     right_on='code'
 )
+## Create image URL columns
+weatherInfoFilteredDataFrame['img'] = (
+    weatherInfoFilteredDataFrame['code'].apply(
+        lambda val: f"https://raw.githubusercontent.com/nairkivm/weather-forecast/main/resources/weather_icon/{str(val)}.svg"
+    )
+)
+## Create text_time column
+textTimeDict = {0: 'Malam', 6: 'Pagi', 12: 'Siang', 18: 'Sore'}
+weatherInfoFilteredDataFrame['txt_time'] = (
+    weatherInfoFilteredDataFrame['timestamp'].dt.strftime('%H').apply(
+        lambda val: textTimeDict[int(val)]
+    )
+)
+## Create date column
+weatherInfoFilteredDataFrame['date'] = (
+    weatherInfoFilteredDataFrame['timestamp'].dt.strftime("%d %b '%y")
+)
+## Sort dataFrame
+weatherInfoFilteredDataFrame =(
+    weatherInfoFilteredDataFrame
+    .sort_values(by='timestamp')
+    .reset_index(drop=True)
+)
 
+# Temperature TimeFrame
+## Create date columns
+temperatureFilteredDataFrame['date'] = (
+    temperatureFilteredDataFrame['timestamp'].dt.strftime("%d %b '%y")
+)
+## Create text_time column
+temperatureFilteredDataFrame['txt_time'] = (
+    temperatureFilteredDataFrame['timestamp'].dt.strftime('%H').apply(
+        lambda val: textTimeDict[int(val)]
+    )
+)
+## Sort dataFrame
+temperatureFilteredDataFrame = (
+    temperatureFilteredDataFrame
+    .sort_values(by='timestamp')
+    .reset_index(drop=True)
+)
 
-with st.container():
+# Create a container for the weather summary
+with st.container(border=True):
+    col1_3, col2_3 = st.columns([1,4])
+    with col1_3:
+        st.metric(
+            '**Temperatur Rerata**',
+            f"{avgTemperatureMetricsData:.2f} °"+
+            temperatureScale[0]
+        )
+    with col2_3:
+        dateList = list(weatherInfoFilteredDataFrame['date'].unique())
+        tabs = st.tabs(dateList)
+        i = 0
+        for tab in tabs:
+            with tab:
+                cols = st.columns(4)
+                with cols[0]:
+                    st.markdown("**Cuaca Pagi (Pukul 6)**")
+                    st.image(
+                        weatherInfoFilteredDataFrame[
+                            (weatherInfoFilteredDataFrame['date'] == dateList[i]) &
+                            (weatherInfoFilteredDataFrame['txt_time'] == 'Pagi')
+                        ].head(1)['img'].values[0],
+                        weatherInfoFilteredDataFrame[
+                            (weatherInfoFilteredDataFrame['date'] == dateList[i]) &
+                            (weatherInfoFilteredDataFrame['txt_time'] == 'Pagi')
+                        ].head(1)['info_id'].values[0],
+                        width=100
+                    )
+                    try:
+                        st.markdown(
+                            "T = "+
+                            temperatureFilteredDataFrame[
+                                (temperatureFilteredDataFrame['date'] == dateList[i]) &
+                                (temperatureFilteredDataFrame['txt_time'] == 'Pagi')
+                            ].head(1)['t'].astype('str').values[0] +
+                            " °"+
+                            temperatureScale[0]
+                        )
+                    except:
+                        pass
+                with cols[1]:
+                    st.markdown("**Cuaca Siang (Pukul 12)**")
+                    st.image(
+                        weatherInfoFilteredDataFrame[
+                            (weatherInfoFilteredDataFrame['date'] == dateList[i]) &
+                            (weatherInfoFilteredDataFrame['txt_time'] == 'Siang')
+                        ].head(1)['img'].values[0],
+                        weatherInfoFilteredDataFrame[
+                            (weatherInfoFilteredDataFrame['date'] == dateList[i]) &
+                            (weatherInfoFilteredDataFrame['txt_time'] == 'Siang')
+                        ].head(1)['info_id'].values[0],
+                        width=100
+                    )
+                    try:
+                        st.markdown(
+                            "T = "+
+                            temperatureFilteredDataFrame[
+                                (temperatureFilteredDataFrame['date'] == dateList[i]) &
+                                (temperatureFilteredDataFrame['txt_time'] == 'Siang')
+                            ].head(1)['t'].astype('str').values[0] +
+                            " °"+
+                            temperatureScale[0]
+                        )
+                    except:
+                        pass
+                with cols[2]:
+                    st.markdown("**Cuaca Sore (Pukul 18)**")
+                    st.image(
+                        weatherInfoFilteredDataFrame[
+                            (weatherInfoFilteredDataFrame['date'] == dateList[i]) &
+                            (weatherInfoFilteredDataFrame['txt_time'] == 'Sore')
+                        ].head(1)['img'].values[0],
+                        weatherInfoFilteredDataFrame[
+                            (weatherInfoFilteredDataFrame['date'] == dateList[i]) &
+                            (weatherInfoFilteredDataFrame['txt_time'] == 'Sore')
+                        ].head(1)['info_id'].values[0],
+                        width=100
+                    )
+                    try:
+                        st.markdown(
+                            "T = "+
+                            temperatureFilteredDataFrame[
+                                (temperatureFilteredDataFrame['date'] == dateList[i]) &
+                                (temperatureFilteredDataFrame['txt_time'] == 'Sore')
+                            ].head(1)['t'].astype('str').values[0] +
+                            " °"+
+                            temperatureScale[0]
+                        )
+                    except:
+                        pass
+                with cols[3]:
+                    st.markdown("**Cuaca Malam (Pukul 0)**")
+                    st.image(
+                        weatherInfoFilteredDataFrame[
+                            (weatherInfoFilteredDataFrame['date'] == dateList[i]) &
+                            (weatherInfoFilteredDataFrame['txt_time'] == 'Malam')
+                        ].head(1)['img'].values[0],
+                        weatherInfoFilteredDataFrame[
+                            (weatherInfoFilteredDataFrame['date'] == dateList[i]) &
+                            (weatherInfoFilteredDataFrame['txt_time'] == 'Malam')
+                        ].head(1)['info_id'].values[0],
+                        width=100
+                    )
+                    try:
+                        st.markdown(
+                            "T = "+
+                            temperatureFilteredDataFrame[
+                                (temperatureFilteredDataFrame['date'] == dateList[i]) &
+                                (temperatureFilteredDataFrame['txt_time'] == 'Malam')
+                            ].head(1)['t'].astype('str').values[0] +
+                            " °"+
+                            temperatureScale[0]
+                        )
+                    except:
+                        pass
+            i += 1
 
+# Set Up for the line chart's scale
+if timeframeScale == 'Harian':
+    tempDF = (
+        temperatureFilteredDataFrame
+        .groupby('date')
+        ['t']
+        .mean()
+        .reset_index()
+        [['date','t']]
+    )
+elif timeframeScale == 'Per Jam':
+    tempDF = (
+        temperatureFilteredDataFrame[
+            ['timestamp', 't']
+        ]
+    )
+else:
+    tempDF = (
+        temperatureFilteredDataFrame
+        .groupby('date')
+        ['t']
+        .mean()
+        .reset_index()
+        [['date','t']]
+    )
+    tempDF.columns = ['date','t_daily']
+    tempDF = pd.merge(
+        temperatureFilteredDataFrame,
+        tempDF,
+        how='left',
+        on='date'
+    )
+    tempDF = tempDF[['timestamp', 't_daily', 't']]
+    tempDF.columns=['timestamp', 't_daily', 't_hourly']
 
-# Average Temperature 
-# - Metrics
-
-# Temperature forecast timeline
-# - Line chart
-
-# Weather info 
-# - 
-
+with st.container(border=True):
+    if timeframeScale not in ['Harian','Per Jam']:
+        tempDF.columns = [
+            'Waktu', 
+            'Temperatur Harian °'+temperatureScale[0],
+            'Temperatur Per Jam °'+temperatureScale[0]
+        ]
+        st.markdown("**Temperatur dari Waktu ke Waktu**")
+        st.line_chart(
+            tempDF,
+            x="Waktu",
+            y=[
+                "Temperatur Harian °"+temperatureScale[0],
+                "Temperatur Per Jam °"+temperatureScale[0]
+            ]
+        )
+    else:
+        tempDF.columns = ['Waktu', 'Temperatur °'+temperatureScale[0]]
+        st.markdown("**Temperatur dari Waktu ke Waktu**")
+        st.line_chart(
+            tempDF,
+            x="Waktu",
+            y="Temperatur °"+temperatureScale[0]
+        )
